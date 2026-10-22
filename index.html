@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>407 Volleyball Club - Coach Dashboard</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f172a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Volley Coach">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+<!-- jspdf and jspdf-autotable for PDF exports -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+
+<style>
+:root{
+  --nav:#0f172a;
+  --blue:#0b6fce;
+  --bg:#f4f7fb;
+  --line:#cbd5e1;
+  --card:#ffffff;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;
+  font-family:Arial,Helvetica,sans-serif;
+  background:var(--bg);
+  color:#0f172a;
+  overscroll-behavior:none;
+  -webkit-touch-callout:none;
+}
+header{
+  background:var(--nav);
+  color:#fff;
+  padding:14px 16px;
+  position:sticky;
+  top:0;
+  z-index:50;
+  box-shadow:0 4px 18px rgba(0,0,0,.18);
+}
+h1{
+  font-size:22px;
+  margin:0 0 12px;
+  text-align:center;
+  font-weight:800;
+  letter-spacing:0.5px;
+}
+h2{font-size:18px;margin-top:0}
+h3{font-size:16px;margin:0 0 10px}
+
+.top{
+  display:grid;
+  grid-template-columns:1fr auto 1fr;
+  gap:12px;
+  align-items:center;
+}
+input,select,textarea{
+  padding:12px;
+  border:1px solid var(--line);
+  border-radius:12px;
+  width:100%;
+  font-size:16px;
+  min-height:44px;
+  background:#fff;
+}
+
+.score-container{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:6px;
+}
+.score{
+  background:#fff;
+  color:#000;
+  padding:8px 18px;
+  border-radius:16px;
+  text-align:center;
+  font-size:32px;
+  font-weight:900;
+  min-width:160px;
+}
+.set-badge{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  background:rgba(255,255,255,0.15);
+  padding:4px 12px;
+  border-radius:10px;
+  color:#fff;
+  font-size:13px;
+  font-weight:bold;
+}
+.set-badge select{
+  min-height:28px !important;
+  height:28px !important;
+  padding:2px 8px !important;
+  font-size:13px !important;
+  font-weight:bold !important;
+  border-radius:6px !important;
+  background:#fff !important;
+  color:#0f172a !important;
+  width:auto !important;
+}
+
+main{
+  padding:14px;
+  max-width:1400px;
+  margin:auto;
+}
+.actions{
+  display:grid;
+  grid-template-columns:repeat(5,minmax(0,1fr));
+  gap:8px;
+  margin:12px 0 14px;
+  position:sticky;
+  top:128px;
+  z-index:40;
+  background:rgba(244,247,251,.94);
+  backdrop-filter:blur(8px);
+  padding:8px 0;
+}
+.draw-tools,.quick{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:8px;
+  margin:12px 0;
+}
+button{
+  border:0;
+  background:var(--nav);
+  color:#fff;
+  padding:12px 10px;
+  border-radius:12px;
+  font-weight:800;
+  cursor:pointer;
+  min-height:46px;
+  font-size:15px;
+  touch-action:manipulation;
+  -webkit-tap-highlight-color:transparent;
+}
+button:active{transform:scale(.98)}
+.light{background:#e2e8f0;color:#000}
+.danger{background:#b91c1c}
+.layout{
+  display:grid;
+  grid-template-columns:1.15fr .85fr;
+  gap:16px;
+}
+.card{
+  background:var(--card);
+  border-radius:20px;
+  padding:14px;
+  box-shadow:0 6px 20px rgba(0,0,0,.08);
+  margin-bottom:16px;
+}
+.court-shell{
+  background:#0b5fa5;
+  padding:18px;
+  border-radius:20px;
+}
+.court{
+  position:relative;
+  aspect-ratio:18/9;
+  background:#f4c28a;
+  border:4px solid #fff;
+  overflow:hidden;
+  touch-action:none;
+}
+.line{position:absolute;background:rgba(255,255,255,.9)}
+.v25{left:25%;top:0;bottom:0;width:3px}
+.v50{left:50%;top:0;bottom:0;width:4px}
+.v75{left:75%;top:0;bottom:0;width:3px}
+.h33{top:33.3%;left:0;right:0;height:3px}
+.h66{top:66.6%;left:0;right:0;height:3px}
+.net{position:absolute;left:50%;top:0;bottom:0;width:8px;background:#ddd;transform:translateX(-50%)}
+canvas{position:absolute;inset:0;width:100%;height:100%;cursor:crosshair;touch-action:none}
+.roster-grid{display:grid;grid-template-columns:1fr;gap:12px}
+.roster-card{border:1px solid #e5e7eb;border-radius:16px;padding:12px}
+.roster-row{
+  display:grid;
+  grid-template-columns:52px 1fr 140px;
+  gap:8px;
+  margin-bottom:8px;
+  align-items:center;
+}
+.roster-row input.num-input{
+  width:52px;
+  text-align:center;
+  font-weight:bold;
+  background:#f1f5f9;
+}
+.tabs{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:8px;
+  margin-bottom:12px;
+  position:sticky;
+  top:190px;
+  background:#fff;
+  z-index:20;
+  padding-bottom:8px;
+}
+.tab{display:none}
+.tab.active{display:block}
+.stat-section{border:1px solid #e5e7eb;border-radius:16px;padding:12px;margin-bottom:12px}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.stat-row{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  background:#f8fafc;
+  padding:10px;
+  border-radius:12px;
+  gap:10px;
+}
+.stat-row button{min-width:44px}
+.summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.summary-item{
+  background:#f8fafc;
+  padding:12px;
+  border-radius:12px;
+  display:flex;
+  justify-content:space-between;
+  font-size:16px;
+}
+
+/* Rotation Circle Styles */
+.rotation-wrapper{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:16px;
+  padding:10px 0;
+}
+.rotation-svg-container{
+  position:relative;
+  width:260px;
+  height:260px;
+}
+.rotation-svg{
+  width:100%;
+  height:100%;
+}
+.rot-inputs-grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:10px;
+  width:100%;
+  max-width:360px;
+}
+.rot-input-item{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:4px;
+}
+.rot-input-item label{
+  font-size:12px;
+  font-weight:bold;
+  color:#64748b;
+}
+.rot-input-item input{
+  text-align:center;
+  font-weight:bold;
+  font-size:16px;
+  padding:6px;
+  min-height:38px;
+}
+
+/* Responsive adjustments */
+@media(max-width:1050px){
+  .layout{grid-template-columns:1fr}
+  .actions{top:124px}
+  .tabs{top:184px}
+}
+
+@media(max-width:700px){
+  header{padding:12px}
+  h1{font-size:18px}
+  .top{grid-template-columns:1fr;gap:8px}
+  .score{width:100%;font-size:28px}
+  main{padding:10px}
+  .actions{
+    grid-template-columns:repeat(3,1fr);
+    top:210px;
+  }
+  .draw-tools,.quick{grid-template-columns:repeat(2,1fr)}
+  .card{padding:12px;border-radius:18px}
+  .court-shell{padding:10px;border-radius:16px}
+  .court{aspect-ratio:1/1.25}
+  .roster-row{grid-template-columns:48px 1fr 110px}
+  .tabs{top:360px}
+  .stat-grid,.summary-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<header>
+<h1>407 Volleyball Club - Coach Dashboard</h1>
+<div class="top">
+<input value="Home Team" id="team">
+<div class="score-container">
+  <div class="score"><span id="us">0</span> - <span id="them">0</span></div>
+  <div class="set-badge">
+    <span>SET:</span>
+    <select id="setSelect" onchange="currentSet=this.value; saveGameData();">
+      <option value="1">Set 1</option>
+      <option value="2">Set 2</option>
+      <option value="3">Set 3</option>
+      <option value="4">Set 4</option>
+      <option value="5">Set 5</option>
+    </select>
+  </div>
+</div>
+<input value="Opponent" id="opp">
+</div>
+</header>
+
+<main>
+<div class="actions">
+<button onclick="score('us')">+ Home</button>
+<button onclick="score('them')">+ Away</button>
+<button class="light" onclick="undo('us')">- Home</button>
+<button class="light" onclick="undo('them')">- Away</button>
+<button class="light" onclick="saveGame()">Save (PDF)</button>
+</div>
+
+<div class="layout">
+<div class="card">
+<h2>Clean Court + Drawing</h2>
+
+<div class="draw-tools">
+<button onclick="tool='draw'">Pen</button>
+<button class="light" onclick="tool='erase'">Eraser</button>
+<button class="light" onclick="undoStroke()">Undo Draw</button>
+<button class="danger" onclick="clearCanvas()">Clear</button>
+</div>
+
+<div class="court-shell">
+<div class="court">
+<div class="line v25"></div>
+<div class="line v50"></div>
+<div class="line v75"></div>
+<div class="line h33"></div>
+<div class="line h66"></div>
+<div class="net"></div>
+<canvas id="canvas"></canvas>
+</div>
+</div>
+
+<div class="quick">
+<button class="light" onclick="quick('Aces')">Ace</button>
+<button class="light" onclick="quick('Kills')">Kill</button>
+<button class="light" onclick="quick('Digs')">Dig</button>
+<button class="light" onclick="quick('Assists')">Assist</button>
+</div>
+
+<div class="roster-grid">
+<div class="roster-card">
+<h3>Home Team Roster (12 Players)</h3>
+<div id="roster"></div>
+</div>
+</div>
+</div>
+
+<div>
+<div class="card">
+<div class="tabs">
+<button onclick="showTab('stats')">Stats</button>
+<button onclick="showTab('summary')">Summary</button>
+<button onclick="showTab('notes')">Notes</button>
+</div>
+
+<div id="stats" class="tab active">
+<h2 id="playerTitle"></h2>
+<select id="playerSelect" onchange="selected=this.value;render()"></select>
+<div id="statsPanel"></div>
+</div>
+
+<div id="summary" class="tab">
+<h2>Summary</h2>
+<div id="summaryPanel" class="summary-grid"></div>
+</div>
+
+<div id="notes" class="tab">
+<h2>Notes</h2>
+<textarea rows="14" placeholder="Match notes, opponent strategies..."></textarea>
+</div>
+</div>
+
+<!-- Court Rotation Section -->
+<div class="card">
+<h2>Court Rotation Wheel</h2>
+<div class="rotation-wrapper">
+  <div class="rotation-svg-container">
+    <svg viewBox="0 0 300 300" class="rotation-svg">
+      <circle cx="150" cy="150" r="140" fill="#ffffff" stroke="#0f172a" stroke-width="4"/>
+      <line x1="150" y1="10" x2="150" y2="290" stroke="#0f172a" stroke-width="3"/>
+      <line x1="28.7" y1="80" x2="271.3" y2="220" stroke="#0f172a" stroke-width="3"/>
+      <line x1="28.7" y1="220" x2="271.3" y2="80" stroke="#0f172a" stroke-width="3"/>
+
+      <!-- Centered Slice Numbers -->
+      <!-- Pos 1 (Bottom Right: ~30 deg) -->
+      <text id="rotText1" x="190" y="219" font-size="28" font-weight="900" fill="#ea580c" text-anchor="middle" dominant-baseline="central">1</text>
+      <!-- Pos 2 (Top Right: ~90 deg) -->
+      <text id="rotText2" x="230" y="150" font-size="28" font-weight="900" fill="#ea580c" text-anchor="middle" dominant-baseline="central">2</text>
+      <!-- Pos 3 (Top Middle: ~150 deg) -->
+      <text id="rotText3" x="190" y="81" font-size="28" font-weight="900" fill="#ea580c" text-anchor="middle" dominant-baseline="central">3</text>
+      <!-- Pos 4 (Top Left: ~210 deg) -->
+      <text id="rotText4" x="110" y="81" font-size="28" font-weight="900" fill="#ea580c" text-anchor="middle" dominant-baseline="central">4</text>
+      <!-- Pos 5 (Bottom Left: ~270 deg) -->
+      <text id="rotText5" x="70" y="150" font-size="28" font-weight="900" fill="#ea580c" text-anchor="middle" dominant-baseline="central">5</text>
+      <!-- Pos 6 (Bottom Middle: ~330 deg) -->
+      <text id="rotText6" x="110" y="219" font-size="28" font-weight="900" fill="#ea580c" text-anchor="middle" dominant-baseline="central">6</text>
+    </svg>
+  </div>
+
+  <button onclick="rotateClockwise()" style="width:100%; max-width:280px; background:#0b6fce;">Rotate Clockwise ↻</button>
+
+  <div class="rot-inputs-grid">
+    <div class="rot-input-item">
+      <label>Pos 4</label>
+      <input type="text" id="rotInputPos4" placeholder="#" onchange="updateRotationPosition(4, this.value)">
+    </div>
+    <div class="rot-input-item">
+      <label>Pos 3</label>
+      <input type="text" id="rotInputPos3" placeholder="#" onchange="updateRotationPosition(3, this.value)">
+    </div>
+    <div class="rot-input-item">
+      <label>Pos 2</label>
+      <input type="text" id="rotInputPos2" placeholder="#" onchange="updateRotationPosition(2, this.value)">
+    </div>
+    <div class="rot-input-item">
+      <label>Pos 5</label>
+      <input type="text" id="rotInputPos5" placeholder="#" onchange="updateRotationPosition(5, this.value)">
+    </div>
+    <div class="rot-input-item">
+      <label>Pos 6</label>
+      <input type="text" id="rotInputPos6" placeholder="#" onchange="updateRotationPosition(6, this.value)">
+    </div>
+    <div class="rot-input-item">
+      <label>Pos 1</label>
+      <input type="text" id="rotInputPos1" placeholder="#" onchange="updateRotationPosition(1, this.value)">
+    </div>
+  </div>
+</div>
+</div>
+</div>
+</div>
+</main>
+
+<script>
+const stats=["Aces","Kills","Digs","Assists","Serve Errors","Attack Errors"];
+let selected="1";
+let tool="draw";
+let us=0,them=0;
+let currentSet="1";
+
+let rotation=["1","2","3","4","5","6"];
+
+let players=Array.from({length:12},(_,i)=>({
+id:String(i+1),
+number:String(i+1),
+name:"",
+position:"",
+stats:Object.fromEntries(stats.map(s=>[s,0]))
+}));
+
+function renderRoster(){
+const r=document.getElementById('roster');
+if(!r) return;
+r.innerHTML='';
+players.forEach((p,i)=>{
+r.innerHTML+=`
+<div class="roster-row">
+<input type="text" value="${p.number}" class="num-input" onchange="update('${p.id}','number',this.value)">
+<input value="${p.name}" placeholder="Player name" onchange="update('${p.id}','name',this.value)">
+<select onchange="update('${p.id}','position',this.value)">
+<option value="">Position</option>
+<option ${p.position==='OH'?'selected':''}>OH</option>
+<option ${p.position==='MB'?'selected':''}>MB</option>
+<option ${p.position==='OPP'?'selected':''}>OPP</option>
+<option ${p.position==='S'?'selected':''}>S</option>
+<option ${p.position==='L'?'selected':''}>L</option>
+<option ${p.position==='DS'?'selected':''}>DS</option>
+</select>
+</div>`;
+});
+}
+
+function renderSelect(){
+const s=document.getElementById('playerSelect');
+if(!s) return;
+s.innerHTML='';
+players.forEach(p=>{
+s.innerHTML+=`<option value="${p.id}" ${selected===p.id?'selected':''}>#${p.number} ${p.name||'Player'} ${p.position}</option>`
+});
+}
+
+function renderStats(){
+const p=players.find(x=>x.id===selected);
+if(!p) return;
+const title=document.getElementById('playerTitle');
+if(title) title.innerText=`#${p.number} ${p.name||'Player'} ${p.position}`;
+const panel=document.getElementById('statsPanel');
+if(!panel) return;
+panel.innerHTML='<div class="stat-section"><div class="stat-grid">'+stats.map(st=>`
+<div class="stat-row">
+<span>${st}</span>
+<div>
+<button onclick="change('${st}',-1)">-</button>
+<span style="padding:0 8px;font-weight:800">${p.stats[st]}</span>
+<button onclick="change('${st}',1)">+</button>
+</div>
+</div>`).join('')+'</div></div>';
+}
+
+function renderSummary(){
+const totals=Object.fromEntries(stats.map(s=>[s,0]));
+players.forEach(p=>stats.forEach(s=>totals[s]+=p.stats[s]));
+const panel=document.getElementById('summaryPanel');
+if(!panel) return;
+panel.innerHTML='';
+stats.forEach(s=>{
+panel.innerHTML+=`<div class="summary-item"><span>${s}</span><strong>${totals[s]}</strong></div>`
+});
+}
+
+function renderRotationWheel(){
+const positions=[
+  { pos: 1, angle: 30 },
+  { pos: 2, angle: 90 },
+  { pos: 3, angle: 150 },
+  { pos: 4, angle: 210 },
+  { pos: 5, angle: 270 },
+  { pos: 6, angle: 330 }
+];
+const cx = 150, cy = 150, radius = 80;
+positions.forEach(p => {
+  const textElem = document.getElementById(`rotText${p.pos}`);
+  const inputElem = document.getElementById(`rotInputPos${p.pos}`);
+  if(textElem && inputElem){
+    const rad = (p.angle - 90) * (Math.PI / 180);
+    const x = cx + radius * Math.cos(rad);
+    const y = cy + radius * Math.sin(rad);
+    textElem.setAttribute('x', x);
+    textElem.setAttribute('y', y);
+    const val = rotation[p.pos - 1] || "";
+    textElem.textContent = val;
+    inputElem.value = val;
+  }
+});
+}
+
+function updateRotationPosition(pos, val){
+rotation[pos - 1] = val;
+renderRotationWheel();
+saveGameData();
+}
+
+function rotateClockwise(){
+const last = rotation.pop();
+rotation.unshift(last);
+renderRotationWheel();
+saveGameData();
+}
+
+function render(){
+document.getElementById('us').innerText=us;
+document.getElementById('them').innerText=them;
+const setSel = document.getElementById('setSelect');
+if(setSel) setSel.value = currentSet;
+renderRoster();
+renderSelect();
+renderStats();
+renderSummary();
+renderRotationWheel();
+}
+
+function update(id,field,val){
+players=players.map(p=>p.id===id?{...p,[field]:val}:p);
+render();
+saveGameData();
+}
+
+function change(stat,d){
+players=players.map(p=>{
+if(p.id!==selected)return p;
+p.stats[stat]=Math.max(0,p.stats[stat]+d);
+return p;
+});
+render();
+saveGameData();
+}
+
+function quick(stat){change(stat,1)}
+function score(t){if(t==='us')us++;else them++;render();saveGameData();}
+function undo(t){if(t==='us')us=Math.max(0,us-1);else them=Math.max(0,them-1);render();saveGameData();}
+
+function showTab(id){
+document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+document.getElementById(id).classList.add('active');
+}
+
+function saveGameData(){
+localStorage.setItem('vb-dashboard',JSON.stringify({players,us,them,currentSet,rotation}));
+}
+
+function saveGame(){
+saveGameData();
+generatePDF();
+}
+
+function generatePDF(){
+try {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const teamName = document.getElementById('team').value || "Home Team";
+  const oppName = document.getElementById('opp').value || "Opponent";
+  const notesText = document.querySelector('#notes textarea')?.value || "";
+
+  doc.setFillColor(15, 23, 42);
+  doc.rect(0, 0, 210, 30, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(18);
+  doc.setFont("helvetica", "bold");
+  doc.text("407 Volleyball Club - Match Report", 14, 20);
+
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "normal");
+  doc.text(`Generated: ${new Date().toLocaleString()}`, 130, 20);
+
+  doc.setTextColor(15, 23, 42);
+  doc.setFontSize(14);
+  doc.setFont("helvetica", "bold");
+  doc.text(`Set ${currentSet} Score`, 14, 40);
+
+  doc.setFontSize(12);
+  doc.setFont("helvetica", "normal");
+  doc.text(`${teamName}: ${us}`, 14, 48);
+  doc.text(`${oppName}: ${them}`, 14, 55);
+
+  doc.setFontSize(14);
+  doc.setFont("helvetica", "bold");
+  doc.text("Court Rotation Lineup", 110, 40);
+
+  const rotText = `Pos 1: #${rotation[0] || '-'} | Pos 2: #${rotation[1] || '-'} | Pos 3: #${rotation[2] || '-'}\nPos 4: #${rotation[3] || '-'} | Pos 5: #${rotation[4] || '-'} | Pos 6: #${rotation[5] || '-'}`;
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "normal");
+  doc.text(rotText, 110, 48);
+
+  doc.setFontSize(14);
+  doc.setFont("helvetica", "bold");
+  doc.text("Team Summary Totals", 14, 68);
+
+  const totals = Object.fromEntries(stats.map(s=>[s,0]));
+  players.forEach(p=>stats.forEach(s=>totals[s]+=p.stats[s]));
+
+  const summaryRows = Object.entries(totals).map(([stat, val]) => [stat, val]);
+  doc.autoTable({
+    startY: 72,
+    head: [['Stat', 'Total']],
+    body: summaryRows,
+    theme: 'grid',
+    headStyles: { fillColor: [11, 111, 206] },
+    tableWidth: 80
+  });
+
+  doc.setFontSize(14);
+  doc.setFont("helvetica", "bold");
+  doc.text("Individual Player Stats", 14, doc.lastAutoTable.finalY + 12);
+
+  const playerRows = players.map(p => [
+    `#${p.number}`,
+    p.name || "-",
+    p.position || "-",
+    ...stats.map(s => p.stats[s])
+  ]);
+
+  doc.autoTable({
+    startY: doc.lastAutoTable.finalY + 16,
+    head: [['#', 'Name', 'Pos', ...stats]],
+    body: playerRows,
+    theme: 'striped',
+    headStyles: { fillColor: [15, 23, 42] }
+  });
+
+  if(notesText.trim().length > 0){
+    const nextY = doc.lastAutoTable.finalY + 12;
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text("Notes", 14, nextY);
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.text(notesText, 14, nextY + 8, { maxWidth: 180 });
+  }
+
+  doc.save(`407_Volleyball_Set${currentSet}_Report.pdf`);
+} catch(e) {
+  console.error("PDF Error:", e);
+}
+}
+
+function loadGame(){
+const d=JSON.parse(localStorage.getItem('vb-dashboard')||'{}');
+if(d.players) players=d.players;
+us=d.us||0;
+them=d.them||0;
+currentSet=d.currentSet||"1";
+if(d.rotation) rotation=d.rotation;
+render();
+}
+
+// Drawing canvas logic with robust touch pointer events
+const canvas=document.getElementById('canvas');
+const ctx=canvas.getContext('2d');
+let drawing=false;
+let strokes=[];
+
+function resize(){
+if(!canvas) return;
+const ratio = window.devicePixelRatio || 1;
+const rect = canvas.getBoundingClientRect();
+canvas.width = rect.width * ratio;
+canvas.height = rect.height * ratio;
+ctx.setTransform(ratio,0,0,ratio,0,0);
+redraw();
+}
+window.addEventListener('resize',resize);
+
+canvas.addEventListener('pointerdown', e => {
+  e.preventDefault();
+  drawing = true;
+  canvas.setPointerCapture(e.pointerId);
+  strokes.push([]);
+  draw(e);
+});
+canvas.addEventListener('pointermove', e => {
+  if (!drawing) return;
+  e.preventDefault();
+  draw(e);
+});
+canvas.addEventListener('pointerup', e => {
+  e.preventDefault();
+  drawing = false;
+});
+canvas.addEventListener('pointercancel', () => drawing = false);
+
+function draw(e){
+const rect=canvas.getBoundingClientRect();
+const x=e.clientX-rect.left;
+const y=e.clientY-rect.top;
+strokes[strokes.length-1].push({x,y,tool});
+redraw();
+}
+
+function redraw(){
+ctx.clearRect(0,0,canvas.width,canvas.height);
+strokes.forEach(stroke=>{
+for(let i=1;i<stroke.length;i++){
+const a=stroke[i-1],b=stroke[i];
+ctx.beginPath();
+ctx.lineWidth=a.tool==='erase'?18:4;
+ctx.strokeStyle='#111';
+ctx.globalCompositeOperation=a.tool==='erase'?'destination-out':'source-over';
+ctx.moveTo(a.x,a.y);
+ctx.lineTo(b.x,b.y);
+ctx.stroke();
+}
+});
+}
+
+function undoStroke(){strokes.pop();redraw()}
+function clearCanvas(){strokes=[];redraw()}
+
+window.onload = function() {
+  loadGame();
+  resize();
+};
+</script>
+</body>
+</html>
